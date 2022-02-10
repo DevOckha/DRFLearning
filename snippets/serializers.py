@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import Snippet, LANGUAGE_CHOICES, STYLE_CHOICES
-
+from django.contrib.auth.models import User
 #"""Web API'mize başlamak için ihtiyacımız olan ilk şey, snippet örneklerini json gibi temsillere serileştirmenin ve seri durumdan çıkarmanın bir yolunu sağlamaktır."""
 
 # class SnippetSerializer(serializers.Serializer):
@@ -33,12 +33,22 @@ from .models import Snippet, LANGUAGE_CHOICES, STYLE_CHOICES
 #"""Django'nun hem Form sınıflarını hem de ModelForm sınıflarını sağladığı gibi, REST çerçevesi hem Serializer sınıflarını hem de ModelSerializer sınıflarını içerir."""
 
 class SnippetSerializer(serializers.ModelSerializer):
+    owner = serializers.ReadOnlyField(source='owner.username')
     class Meta:
         model = Snippet
-        fields = ['id', 'title', 'code', 'linenos', 'language', 'style']
+        fields = ['id', 'title', 'code', 'linenos', 'language', 'style','owner']
         
         
         
         
         
 #"""ModelSerializer sınıflarının özellikle sihirli bir şey yapmadığını hatırlamak önemlidir, bunlar sadece seri hale getirici sınıfları oluşturmak için bir kısayoldur:"""
+
+
+class UserSerializer(serializers.ModelSerializer):
+    snippets = serializers.PrimaryKeyRelatedField(many=True, queryset=Snippet.objects.all())
+    
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'snippets']
+        #'Snippet'ler, User modelinde ters bir ilişki olduğundan, ModelSerializer sınıfını kullanırken varsayılan olarak dahil edilmeyecektir, bu yüzden bunun için açık bir alan eklememiz gerekiyordu.
