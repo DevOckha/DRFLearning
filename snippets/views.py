@@ -1,10 +1,12 @@
 from snippets.models import Snippet
 from snippets.permissions import IsOwnerOrReadOnly
 from snippets.serializers import SnippetSerializer, UserSerializer
-from rest_framework import generics
 from django.contrib.auth.models import User
 from rest_framework import permissions
-
+from rest_framework.response import Response
+from rest_framework.decorators import action
+from rest_framework import viewsets
+from rest_framework import renderers
 #API'mizin kökü, mevcut tüm snippet'lerin listelenmesini veya yeni bir snippet oluşturulmasını destekleyen bir görünüm olacaktır.
 
 
@@ -187,27 +189,80 @@ from rest_framework import permissions
 
 #Using generic class-based views
 
-class SnippetList(generics.ListCreateAPIView):
+# class SnippetList(generics.ListCreateAPIView):
+#     queryset = Snippet.objects.all()
+#     serializer_class = SnippetSerializer
+#     permission_classes = (permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly)
+
+
+#     #Serileştiricimizin create() yöntemine, istekten doğrulanmış verilerle birlikte ek bir 'sahip' alanı geçirilecektir.
+#     def perform_create(self, serializer):
+#         serializer.save(owner=self.request.user)
+
+
+# class SnippetDetail(generics.RetrieveUpdateDestroyAPIView):
+#     queryset = Snippet.objects.all()
+#     serializer_class = SnippetSerializer
+#     permission_classes = (permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly)
+
+# class UserList(generics.ListAPIView):
+#     queryset = User.objects.all()
+#     serializer_class = UserSerializer
+
+
+# class UserDetail(generics.RetrieveAPIView):
+#     queryset = User.objects.all()
+#     serializer_class = UserSerializer
+    
+    
+
+# @api_view(['GET'])
+# def api_root(request, format=None):
+#     return Response({
+#         'users' : reverse('user-list', request=request, format=format),
+#         'snippets': reverse('snippet-list', request=request, format=format)
+#     })
+# #Burada iki şeye dikkat edilmelidir. İlk olarak, tam nitelikli URL'leri döndürmek için REST çerçevesinin ters işlevini kullanıyoruz;
+# #ikincisi, URL kalıpları, daha sonra snippet'lerimizde/urls.py'de bildireceğimiz uygun adlarla tanımlanır.
+
+
+# class SnippetHighlight(generics.GenericAPIView):
+#     queryset = Snippet.objects.all()
+#     renderer_classes = [renderers.StaticHTMLRenderer]
+    
+#     def get(self, request, *args, **kwargs):
+#         snippet = self.get_object()
+#         return Response(snippet.highlighted)
+
+
+#Refactoring to use ViewSets
+
+class UserViewSet(viewsets.ReadOnlyModelViewSet):
+    #This viewset automatically provides `list` and `retrieve` actions.
+
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    
+
+
+class SnippetViewSet(viewsets.ModelViewSet):
+    """
+    This viewset automatically provides `list`, `create`, `retrieve`,
+    `update` and `destroy` actions.
+    
+    Additionally we also provide an extra `highlight` action.
+    """
+    
     queryset = Snippet.objects.all()
     serializer_class = SnippetSerializer
-    permission_classes = (permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly)
-
-
-    #Serileştiricimizin create() yöntemine, istekten doğrulanmış verilerle birlikte ek bir 'sahip' alanı geçirilecektir.
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
+    
+    #@action dekoratörünü kullanan özel eylemler, varsayılan olarak GET isteklerine yanıt verecektir
+    @action(detail=True, renderer_classes=[renderers.StaticHTMLRenderer])
+    def highlight(self, request, *args, **kwargs):
+        snippet = self.get_object()
+        return Response(snippet.highlighted)
+    
+    
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
-
-
-class SnippetDetail(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Snippet.objects.all()
-    serializer_class = SnippetSerializer
-    permission_classes = (permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly)
-
-class UserList(generics.ListAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-
-
-class UserDetail(generics.RetrieveAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer

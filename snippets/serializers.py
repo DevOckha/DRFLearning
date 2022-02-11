@@ -1,3 +1,4 @@
+from pygments import highlight
 from rest_framework import serializers
 from .models import Snippet, LANGUAGE_CHOICES, STYLE_CHOICES
 from django.contrib.auth.models import User
@@ -32,11 +33,12 @@ from django.contrib.auth.models import User
 
 #"""Django'nun hem Form sınıflarını hem de ModelForm sınıflarını sağladığı gibi, REST çerçevesi hem Serializer sınıflarını hem de ModelSerializer sınıflarını içerir."""
 
-class SnippetSerializer(serializers.ModelSerializer):
+class SnippetSerializer(serializers.HyperlinkedModelSerializer):
     owner = serializers.ReadOnlyField(source='owner.username')
+    highlight = serializers.HyperlinkedIdentityField(view_name='snippet-highlight', format='html')
     class Meta:
         model = Snippet
-        fields = ['id', 'title', 'code', 'linenos', 'language', 'style','owner']
+        fields = ['id', 'title', 'code', 'linenos', 'language', 'style', 'owner', 'highlight', 'url']
         
         
         
@@ -45,10 +47,10 @@ class SnippetSerializer(serializers.ModelSerializer):
 #"""ModelSerializer sınıflarının özellikle sihirli bir şey yapmadığını hatırlamak önemlidir, bunlar sadece seri hale getirici sınıfları oluşturmak için bir kısayoldur:"""
 
 
-class UserSerializer(serializers.ModelSerializer):
-    snippets = serializers.PrimaryKeyRelatedField(many=True, queryset=Snippet.objects.all())
+class UserSerializer(serializers.HyperlinkedModelSerializer):
+    snippets = serializers.HyperlinkedRelatedField(many=True, view_name='snippet-detail', read_only=True)
     
     class Meta:
         model = User
-        fields = ['id', 'username', 'snippets']
+        fields = ['id', 'username', 'snippets', 'url']
         #'Snippet'ler, User modelinde ters bir ilişki olduğundan, ModelSerializer sınıfını kullanırken varsayılan olarak dahil edilmeyecektir, bu yüzden bunun için açık bir alan eklememiz gerekiyordu.
